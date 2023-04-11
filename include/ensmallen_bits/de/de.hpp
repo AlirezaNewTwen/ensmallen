@@ -95,9 +95,11 @@ class DE
    */
   template<typename FunctionType,
            typename MatType,
+           template<class> class VariablesConstraints,
            typename... CallbackTypes>
   typename MatType::elem_type Optimize(FunctionType& function,
                                        MatType& iterate,
+                                       VariablesConstraints<MatType>& box_search_space,
                                        CallbackTypes&&... callbacks);
 
   //! Get the population size.

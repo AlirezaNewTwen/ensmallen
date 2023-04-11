@@ -14,6 +14,8 @@
 #define ENSMALLEN_DE_DE_IMPL_HPP
 
 #include "de.hpp"
+#include <queue>
+#include <omp.h>
 
 namespace ens {
 
@@ -32,9 +34,11 @@ inline DE::DE(const size_t populationSize ,
 //!Optimize the function
 template<typename FunctionType,
          typename MatType,
+         template<class> class VariablesConstraints,
          typename... CallbackTypes>
 typename MatType::elem_type DE::Optimize(FunctionType& function,
                                          MatType& iterateIn,
+                                         VariablesConstraints<MatType>& boxConstraint,
                                          CallbackTypes&&... callbacks)
 {
   // Convenience typedefs.
@@ -65,16 +69,24 @@ typename MatType::elem_type DE::Optimize(FunctionType& function,
   fitnessValues.set_size(populationSize);
   ElemType lastBestFitness = DBL_MAX;
   BaseMatType bestElement;
+  std::queue<ElemType> performanceHorizon;
+  int max_queue = 60;
 
   // Controls early termination of the optimization process.
   bool terminate = false;
+  arma::arma_rng::set_seed_random();
+  boxConstraint.RandomReseed(iterate);
 
   // Generate a population based on a Gaussian distribution around the given
   // starting point. Also finds the best element of the population.
   for (size_t i = 0; i < populationSize; i++)
   {
-    population[i].randn(iterate.n_rows, iterate.n_cols);
-    population[i] += iterate;
+    //population[i].randn(iterate.n_rows, iterate.n_cols);
+    //population[i] += iterate;
+
+    //random displacement from initial seed within box constraints
+    population[i] = (BaseMatType&)boxConstraint.RandomDisplacement(iterate);
+
     fitnessValues[i] = function.Evaluate(population[i]);
 
     Callback::Evaluate(*this, function, population[i], fitnessValues[i],
@@ -86,6 +98,7 @@ typename MatType::elem_type DE::Optimize(FunctionType& function,
       bestElement = population[i];
     }
   }
+  performanceHorizon.push(lastBestFitness); //append the best found
 
   // Iterate until maximum number of generations are completed.
   terminate |= Callback::BeginOptimization(*this, function, iterate,
@@ -93,7 +106,8 @@ typename MatType::elem_type DE::Optimize(FunctionType& function,
   for (size_t gen = 0; gen < maxGenerations && !terminate; gen++)
   {
     // Generate new population based on /best/1/bin strategy.
-    for (size_t member = 0; member < populationSize; member++)
+    #pragma omp parallel for num_threads(8)
+    for (int member = 0; member < populationSize; member++)
     {
       iterate = population[member];
 
@@ -115,6 +129,9 @@ typename MatType::elem_type DE::Optimize(FunctionType& function,
       BaseMatType mutant = bestElement + differentialWeight *
           (population[l] - population[m]);
 
+      //box constraints
+      boxConstraint.RandBehave(mutant);
+
       // Perform crossover.
       const BaseMatType cr = arma::randu<BaseMatType>(iterate.n_rows);
       for (size_t it = 0; it < iterate.n_rows; it++)
@@ -126,9 +143,11 @@ typename MatType::elem_type DE::Optimize(FunctionType& function,
       }
 
       ElemType iterateValue = function.Evaluate(iterate);
+      #pragma omp critical 
       Callback::Evaluate(*this, function, iterate, iterateValue, callbacks...);
 
       const ElemType mutantValue = function.Evaluate(mutant);
+      #pragma omp critical 
       Callback::Evaluate(*this, function, mutant, mutantValue, callbacks...);
 
       // Replace the current member if mutant is better.
@@ -136,33 +155,38 @@ typename MatType::elem_type DE::Optimize(FunctionType& function,
       {
         iterate = mutant;
         iterateValue = mutantValue;
-
-        terminate |= Callback::StepTaken(*this, function, iterate,
-            callbacks...);
+        #pragma omp critical 
+        terminate |= Callback::StepTaken(*this, function, iterate,callbacks...);
       }
 
       fitnessValues[member] = iterateValue;
       population[member] = iterate;
+
     }
 
+    // Append bestFitness to performanceHorizon.
+    size_t id_min = fitnessValues.index_min();
+    ElemType min_objective = fitnessValues[id_min];
+
+    performanceHorizon.push(min_objective);
+    while (performanceHorizon.size() > max_queue)
+        performanceHorizon.pop();
+
     // Check for termination criteria.
-    if (std::abs(lastBestFitness - fitnessValues.min()) < tolerance)
+    ElemType delta_obj_horizon = std::abs(performanceHorizon.front() - performanceHorizon.back());
+
+    if (std::abs(lastBestFitness - min_objective) < tolerance && delta_obj_horizon < tolerance && gen>2)
     {
       Info << "DE: minimized within tolerance " << tolerance << "; "
           << "terminating optimization." << std::endl;
+      lastBestFitness = min_objective;
       break;
     }
 
     // Update helper variables.
-    lastBestFitness = fitnessValues.min();
-    for (size_t it = 0; it < populationSize; it++)
-    {
-      if (fitnessValues[it] == lastBestFitness)
-      {
-        bestElement = population[it];
-        break;
-      }
-    }
+    lastBestFitness = min_objective;
+    bestElement = population[id_min];
+
   }
 
   iterate = bestElement;

@@ -16,7 +16,7 @@
 #include "pso.hpp"
 #include <ensmallen_bits/function.hpp>
 #include <queue>
-
+#include <omp.h>
 namespace ens {
 
 /**
@@ -37,10 +37,12 @@ template<typename VelocityUpdatePolicy,
          typename InitPolicy>
 template<typename ArbitraryFunctionType,
          typename MatType,
+         template<class> class VariablesConstraints,
          typename... CallbackTypes>
 typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
     ArbitraryFunctionType& function,
     MatType& iterateIn,
+    VariablesConstraints<MatType>& boxConstraint,
     CallbackTypes&&... callbacks)
 {
   // Convenience typedefs.
@@ -97,6 +99,8 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
   // Calculate initial fitness of population.
   for (size_t i = 0; i < numParticles; i++)
   {
+      boxConstraint.RandBehave(particlePositions.slice(i));
+      particlePositions.slice(i).print("");
     // Calculate fitness value.
     particleFitnesses(i) = function.Evaluate(particlePositions.slice(i));
     particleBestFitnesses(i) = particleFitnesses(i);
@@ -118,19 +122,20 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
   for (size_t i = 0; i < horizonSize; i++)
   {
     // Calculate fitness and evaluate personal best.
-    for (size_t j = 0; j < numParticles; j++)
-    {
-      particleFitnesses(j) = function.Evaluate(particlePositions.slice(j));
-      Callback::Evaluate(*this, function, particlePositions.slice(j),
-          particleFitnesses(j), callbacks...);
+    #pragma omp parallel for num_threads(4)
+	  for (int j = 0; j < numParticles; j++)
+	  {
+		  particleFitnesses(j) = function.Evaluate(particlePositions.slice(j));
+		  Callback::Evaluate(*this, function, particlePositions.slice(j),
+			  particleFitnesses(j), callbacks...);
 
-      // Compare and copy fitness and position to particle best.
-      if (particleFitnesses(j) < particleBestFitnesses(j))
-      {
-        particleBestFitnesses(j) = particleFitnesses(j);
-        particleBestPositions.slice(j) = particlePositions.slice(j);
-      }
-    }
+		  // Compare and copy fitness and position to particle best.
+		  if (particleFitnesses(j) < particleBestFitnesses(j))
+		  {
+			  particleBestFitnesses(j) = particleFitnesses(j);
+			  particleBestPositions.slice(j) = particlePositions.slice(j);
+		  }
+	  }
 
     // Evaluate local best and update velocity.
     instUpdatePolicy.As<InstUpdatePolicyType>().Update(
@@ -166,19 +171,21 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
       break;
 
     // Calculate fitness and evaluate personal best.
-    for (size_t j = 0; j < numParticles; j++)
-    {
-      particleFitnesses(j) = function.Evaluate(particlePositions.slice(j));
-      Callback::Evaluate(*this, function, particlePositions.slice(j),
-          particleFitnesses(j), callbacks...);
+//#pragma omp parallel for num_threads(4)
+#pragma omp parallel for num_threads(4)
+        for (int j = 0; j < numParticles; j++)
+        {
+          particleFitnesses(j) = function.Evaluate(particlePositions.slice(j));
+          Callback::Evaluate(*this, function, particlePositions.slice(j),
+              particleFitnesses(j), callbacks...);
 
-      // Compare and copy fitness and position to particle best.
-      if (particleFitnesses(j) < particleBestFitnesses(j))
-      {
-        particleBestFitnesses(j) = particleFitnesses(j);
-        particleBestPositions.slice(j) = particlePositions.slice(j);
-      }
-    }
+          // Compare and copy fitness and position to particle best.
+          if (particleFitnesses(j) < particleBestFitnesses(j))
+          {
+            particleBestFitnesses(j) = particleFitnesses(j);
+            particleBestPositions.slice(j) = particlePositions.slice(j);
+          }
+        }
 
     // Evaluate local best and update velocity.
     instUpdatePolicy.As<InstUpdatePolicyType>().Update(
