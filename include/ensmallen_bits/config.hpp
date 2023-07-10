@@ -70,3 +70,9 @@
 #else
   #define ens_deprecated
 #endif
+
+// undefine conflicting macros
+#if defined(As)
+  #pragma message ("WARNING: undefined conflicting 'As' macro")
+  #undef As
+#endif
