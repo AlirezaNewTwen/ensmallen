@@ -16,7 +16,7 @@
 #include "pso.hpp"
 #include <ensmallen_bits/function.hpp>
 #include <queue>
-#include <omp.h>
+
 namespace ens {
 
 /**
@@ -37,12 +37,10 @@ template<typename VelocityUpdatePolicy,
          typename InitPolicy>
 template<typename ArbitraryFunctionType,
          typename MatType,
-         template<class> class VariablesConstraints,
          typename... CallbackTypes>
 typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
     ArbitraryFunctionType& function,
     MatType& iterateIn,
-    VariablesConstraints<MatType>& boxConstraint,
     CallbackTypes&&... callbacks)
 {
   // Convenience typedefs.
@@ -58,6 +56,15 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
   traits::CheckArbitraryFunctionTypeAPI<ArbitraryFunctionType,
       BaseMatType>();
   RequireDenseFloatingPointType<BaseMatType>();
+
+  // The number of iterations must be greater than the horizon size.
+  if (maxIterations < horizonSize)
+  {
+    std::ostringstream oss;
+    oss << "PSO::Optimize(): maxIterations (" << maxIterations << ") must be "
+        << "greater than or equal to horizonSize (" << horizonSize << ")!";
+    throw std::runtime_error(oss.str());
+  }
 
   BaseMatType& iterate = (BaseMatType&) iterateIn;
 
@@ -93,16 +100,15 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
   instUpdatePolicy.As<InstUpdatePolicyType>().Initialize(exploitationFactor,
       explorationFactor, numParticles, iterate);
 
-  terminate |= Callback::BeginOptimization(*this, function, iterate,
-      callbacks...);
+  Callback::BeginOptimization(*this, function, iterate, callbacks...);
 
   // Calculate initial fitness of population.
-  for (size_t i = 0; i < numParticles; i++)
+  for (size_t i = 0; (i < numParticles) && !terminate; i++)
   {
-      boxConstraint.RandBehave(particlePositions.slice(i));
-      particlePositions.slice(i).print("");
     // Calculate fitness value.
     particleFitnesses(i) = function.Evaluate(particlePositions.slice(i));
+    terminate |= Callback::Evaluate(*this, function,
+        particlePositions.slice(i), particleFitnesses(i), callbacks...);
     particleBestFitnesses(i) = particleFitnesses(i);
   }
 
@@ -119,23 +125,24 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
   // in the PSO method.
   // The performanceHorizon will be updated with the best particle
   // in a FIFO manner.
-  for (size_t i = 0; i < horizonSize; i++)
+  for (size_t i = 0; (i < horizonSize) && !terminate; i++)
   {
     // Calculate fitness and evaluate personal best.
-    #pragma omp parallel for num_threads(4)
-	  for (int j = 0; j < numParticles; j++)
-	  {
-		  particleFitnesses(j) = function.Evaluate(particlePositions.slice(j));
-		  Callback::Evaluate(*this, function, particlePositions.slice(j),
-			  particleFitnesses(j), callbacks...);
+    for (size_t j = 0; (j < numParticles) && !terminate; j++)
+    {
+      particleFitnesses(j) = function.Evaluate(particlePositions.slice(j));
+      terminate |= Callback::Evaluate(*this, function,
+          particlePositions.slice(j), particleFitnesses(j), callbacks...);
+      if (terminate)
+        break;
 
-		  // Compare and copy fitness and position to particle best.
-		  if (particleFitnesses(j) < particleBestFitnesses(j))
-		  {
-			  particleBestFitnesses(j) = particleFitnesses(j);
-			  particleBestPositions.slice(j) = particlePositions.slice(j);
-		  }
-	  }
+      // Compare and copy fitness and position to particle best.
+      if (particleFitnesses(j) < particleBestFitnesses(j))
+      {
+        particleBestFitnesses(j) = particleFitnesses(j);
+        particleBestPositions.slice(j) = particlePositions.slice(j);
+      }
+    }
 
     // Evaluate local best and update velocity.
     instUpdatePolicy.As<InstUpdatePolicyType>().Update(
@@ -163,7 +170,7 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
   }
 
   // Run the remaining iterations of PSO.
-  for (size_t i = 0; i < maxIterations - horizonSize; i++)
+  for (size_t i = 0; (i < maxIterations - horizonSize) && !terminate; i++)
   {
     // Check if there is any improvement over the horizon.
     // If there is no significant improvement, terminate.
@@ -171,21 +178,19 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
       break;
 
     // Calculate fitness and evaluate personal best.
-//#pragma omp parallel for num_threads(4)
-#pragma omp parallel for num_threads(4)
-        for (int j = 0; j < numParticles; j++)
-        {
-          particleFitnesses(j) = function.Evaluate(particlePositions.slice(j));
-          Callback::Evaluate(*this, function, particlePositions.slice(j),
-              particleFitnesses(j), callbacks...);
+    for (size_t j = 0; (j < numParticles) && !terminate; j++)
+    {
+      particleFitnesses(j) = function.Evaluate(particlePositions.slice(j));
+      terminate |= Callback::Evaluate(*this, function,
+          particlePositions.slice(j), particleFitnesses(j), callbacks...);
 
-          // Compare and copy fitness and position to particle best.
-          if (particleFitnesses(j) < particleBestFitnesses(j))
-          {
-            particleBestFitnesses(j) = particleFitnesses(j);
-            particleBestPositions.slice(j) = particlePositions.slice(j);
-          }
-        }
+      // Compare and copy fitness and position to particle best.
+      if (particleFitnesses(j) < particleBestFitnesses(j))
+      {
+        particleBestFitnesses(j) = particleFitnesses(j);
+        particleBestPositions.slice(j) = particlePositions.slice(j);
+      }
+    }
 
     // Evaluate local best and update velocity.
     instUpdatePolicy.As<InstUpdatePolicyType>().Update(

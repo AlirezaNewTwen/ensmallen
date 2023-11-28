@@ -1,3 +1,95 @@
+## ActiveCMAES
+
+*An optimizer for [separable functions](#separable-functions).*
+
+Active CMA-ES is a variant of the stochastic search algorithm
+CMA-ES - Covariance Matrix Adaptation Evolution Strategy.
+Active CMA-ES actively reduces the uncertainty in unfavourable directions by
+exploiting the information about bad mutations in the covariance matrix 
+update step. This isn't for the purpose of accelerating progress, but 
+instead for speeding up the adaptation of the covariance matrix (which, in 
+turn, will lead to faster progress).
+
+#### Constructors
+
+ * `ActiveCMAES<`_`SelectionPolicyType, TransformationPolicyType`_`>()`
+ * `ActiveCMAES<`_`SelectionPolicyType, TransformationPolicyType`_`>(`_`lambda, transformationPolicy`_`)`
+ * `ActiveCMAES<`_`SelectionPolicyType, TransformationPolicyType`_`>(`_`lambda, transformationPolicy, batchSize`_`)`
+ * `ActiveCMAES<`_`SelectionPolicyType, TransformationPolicyType`_`>(`_`lambda, transformationPolicy, batchSize, maxIterations, tolerance, selectionPolicy`_`)`
+ * `ActiveCMAES<`_`SelectionPolicyType, TransformationPolicyType`_`>(`_`lambda, transformationPolicy, batchSize, maxIterations, tolerance, selectionPolicy, stepSize`_`)`
+
+The _`SelectionPolicyType`_ template parameter refers to the strategy used to
+compute the (approximate) objective function.  The `FullSelection` and
+`RandomSelection` classes are available for use; custom behavior can be achieved
+by implementing a class with the same method signatures.
+The _`TransformationPolicyType`_  template parameter refers to transformation 
+strategy used to map decision variables to the desired domain during fitness 
+evaluation and optimization termination. The `EmptyTransformation` and 
+`BoundaryBoxConstraint` classes are available for use; custom behavior can be 
+achieved by implementing a class with the same method signatures.
+
+For convenience the following types can be used:
+
+ * **`ActiveCMAES<>`** (equivalent to `ActiveCMAES<FullSelection, EmptyTransformation<>>`): uses all separable functions to compute objective
+ * **`ApproxActiveCMAES<>`** (equivalent to `ActiveCMAES<RandomSelection, EmptyTransformation<>>`): uses a small amount of separable functions to compute approximate objective
+
+#### Attributes
+
+| **type** | **name** | **description** | **default** |
+|----------|----------|-----------------|-------------|
+| `size_t` | **`lambda`** | The population size (0 uses a default size). | `0` |
+| `TransformationPolicyType` | **`transformationPolicy`** | Instantiated transformation policy used to map the coordinates to the desired domain. | `TransformationPolicyType()` |
+| `size_t` | **`batchSize`** | Batch size to use for the objective calculation. | `32` |
+| `size_t` | **`maxIterations`** | Maximum number of iterations. | `1000` |
+| `double` | **`tolerance`** | Maximum absolute tolerance to terminate algorithm. | `1e-5` |
+| `SelectionPolicyType` | **`selectionPolicy`** | Instantiated selection policy used to calculate the objective. | `SelectionPolicyType()` |
+| `size_t` | **`stepSize`** | Initial step size | `0` |
+
+Attributes of the optimizer may also be changed via the member methods
+`Lambda()`, `TransformationPolicy()`, `BatchSize()`, `MaxIterations()`,
+`Tolerance()`, and `SelectionPolicy()`.
+
+The `selectionPolicy` attribute allows an instantiated `SelectionPolicyType` to
+be given.  The `FullSelection` policy has no need to be instantiated and thus
+the option is not relevant when the `ActiveCMAES<>` optimizer type is being used; the
+`RandomSelection` policy has the constructor `RandomSelection(`_`fraction`_`)`
+where _`fraction`_ specifies the percentage of separable functions to use to
+estimate the objective function.
+The `transformationPolicy` attribute allows an instantiated 
+`TransformationPolicyType` to be given. The `EmptyTransformation<`_`MatType`_`>` 
+has no need to be instantiated. `BoundaryBoxConstraint<`_`MatType`_`>` policy has
+the constructor `BoundaryBoxConstraint(`_`lowerBound, upperBound`_`)`
+where  _`lowerBound`_ and _`lowerBound`_ are the lower bound and upper bound of 
+the coordinates respectively.
+
+#### Examples:
+
+<details open>
+<summary>Click to collapse/expand example code.
+</summary>
+
+```c++
+RosenbrockFunction f;
+arma::mat coordinates = f.GetInitialPoint();
+
+// ActiveCMAES with the FullSelection and BoundaryBoxConstraint policies.
+BoundaryBoxConstraint b(-1, 1);
+ActiveCMAES optimizer(0, b, 32, 200, 1e-4);
+optimizer.Optimize(f, coordinates);
+
+// ActiveCMAES with the RandomSelection and BoundaryBoxConstraint policies.
+ApproxActiveCMAES<BoundaryBoxConstraint<>> cmaes(0, b, 32, 200, 1e-4);
+approxOptimizer.Optimize(f, coordinates);
+```
+
+</details>
+
+#### See also:
+
+ * [CMAES](#cmaes)
+ * [Improving Evolution Strategies through Active Covariance Matrix Adaptation](https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.114.4239&rep=rep1&type=pdfn)
+ * [Evolution strategy in Wikipedia](https://en.wikipedia.org/wiki/Evolution_strategy)
+
 ## AdaBelief
 
 *An optimizer for [differentiable separable functions](#differentiable-separable-functions).*
@@ -686,6 +778,82 @@ optimizer2.Optimize(f, coordinates);
  * [SGD in Wikipedia](https://en.wikipedia.org/wiki/Stochastic_gradient_descent)
  * [SGD](#standard-sgd)
 
+## Coordinate Descent (CD)
+
+*An optimizer for [partially differentiable functions](#partially-differentiable-functions).*
+
+Coordinate descent is a technique for minimizing a function by doing a line
+search along a single direction at the current point in the iteration. The
+direction (or "coordinate") can be chosen cyclically, randomly or in a greedy
+fashion.
+
+#### Constructors
+
+ * `CD<`_`DescentPolicyType`_`>()`
+ * `CD<`_`DescentPolicyType`_`>(`_`stepSize, maxIterations`_`)`
+ * `CD<`_`DescentPolicyType`_`>(`_`stepSize, maxIterations, tolerance, updateInterval`_`)`
+ * `CD<`_`DescentPolicyType`_`>(`_`stepSize, maxIterations, tolerance, updateInterval, descentPolicy`_`)`
+
+The _`DescentPolicyType`_ template parameter specifies the behavior of CD when
+selecting the next coordinate to descend with.  The `RandomDescent`,
+`GreedyDescent`, and `CyclicDescent` classes are available for use.  Custom
+behavior can be achieved by implementing a class with the same method
+signatures.
+
+For convenience, the following typedefs have been defined:
+
+ * `RandomCD` (equivalent to `CD<RandomDescent>`): selects coordinates randomly
+ * `GreedyCD` (equivalent to `CD<GreedyDescent>`): selects the coordinate with the maximum guaranteed descent according to the Gauss-Southwell rule
+ * `CyclicCD` (equivalent to `CD<CyclicDescent>`): selects coordinates sequentially
+
+***Note***: `CD` used to be called `SCD`.  Use of the name `SCD` is deprecated,
+and will be removed in ensmallen 3 and later.
+
+#### Attributes
+
+| **type** | **name** | **description** | **default** |
+|----------|----------|-----------------|-------------|
+| `double` | **`stepSize`** | Step size for each iteration. | `0.01` |
+| `size_t` | **`maxIterations`** | Maximum number of iterations allowed (0 means no limit). | `100000` |
+| `double` | **`tolerance`** | Maximum absolute tolerance to terminate the algorithm. | `1e-5` |
+| `size_t` | **`updateInterval`** | The interval at which the objective is to be reported and checked for convergence. | `1e3` |
+| `DescentPolicyType` | **`descentPolicy`** | The policy to use for selecting the coordinate to descend on. | `DescentPolicyType()` |
+
+Attributes of the optimizer may also be modified via the member methods
+`StepSize()`, `MaxIterations()`, `Tolerance()`, `UpdateInterval()`, and
+`DescentPolicy()`.
+
+Note that the default value for `descentPolicy` is the default constructor for
+_`DescentPolicyType`_.
+
+#### Examples
+
+<details open>
+<summary>Click to collapse/expand example code.
+</summary>
+
+```c++
+SparseTestFunction f;
+arma::mat coordinates = f.GetInitialPoint();
+
+RandomCD randomscd(0.01, 100000, 1e-5, 1e3);
+randomscd.Optimize(f, coordinates);
+
+GreedyCD greedyscd(0.01, 100000, 1e-5, 1e3);
+greedyscd.Optimize(f, coordinates);
+
+CyclicCD cyclicscd(0.01, 100000, 1e-5, 1e3);
+cyclicscd.Optimize(f, coordinates);
+```
+
+</details>
+
+#### See also:
+
+ * [Coordinate descent on Wikipedia](https://en.wikipedia.org/wiki/Coordinate_descent)
+ * [Stochastic Methods for L1-Regularized Loss Minimization](https://www.jmlr.org/papers/volume12/shalev-shwartz11a/shalev-shwartz11a.pdf)
+ * [Partially differentiable functions](#partially-differentiable-functions)
+
 ## CMAES
 
 *An optimizer for [separable functions](#separable-functions).*
@@ -696,35 +864,41 @@ matrix within an iterative procedure using the covariance matrix.
 
 #### Constructors
 
- * `CMAES<`_`SelectionPolicyType`_`>()`
- * `CMAES<`_`SelectionPolicyType`_`>(`_`lambda, lowerBound, upperBound`_`)`
- * `CMAES<`_`SelectionPolicyType`_`>(`_`lambda, lowerBound, upperBound, batchSize`_`)`
- * `CMAES<`_`SelectionPolicyType`_`>(`_`lambda, lowerBound, upperBound, batchSize, maxIterations, tolerance, selectionPolicy`_`)`
+ * `CMAES<`_`SelectionPolicyType, TransformationPolicyType`_`>()`
+ * `CMAES<`_`SelectionPolicyType, TransformationPolicyType`_`>(`_`lambda, transformationPolicy`_`)`
+ * `CMAES<`_`SelectionPolicyType, TransformationPolicyType`_`>(`_`lambda, transformationPolicy, batchSize`_`)`
+ * `CMAES<`_`SelectionPolicyType, TransformationPolicyType`_`>(`_`lambda, transformationPolicy, batchSize, maxIterations, tolerance, selectionPolicy`_`)`
+ * `CMAES<`_`SelectionPolicyType, TransformationPolicyType`_`>(`_`lambda, transformationPolicy, batchSize, maxIterations, tolerance, selectionPolicy, stepSize`_`)`
 
 The _`SelectionPolicyType`_ template parameter refers to the strategy used to
 compute the (approximate) objective function.  The `FullSelection` and
 `RandomSelection` classes are available for use; custom behavior can be achieved
 by implementing a class with the same method signatures.
+The _`TransformationPolicyType`_  template parameter refers to transformation 
+strategy used to map decision variables to the desired domain during fitness 
+evaluation and optimization termination. The `EmptyTransformation` and 
+`BoundaryBoxConstraint` classes are available for use; custom behavior can be 
+achieved by implementing a class with the same method signatures.
 
 For convenience the following types can be used:
 
- * **`CMAES<>`** (equivalent to `CMAES<FullSelection>`): uses all separable functions to compute objective
- * **`ApproxCMAES`** (equivalent to `CMAES<RandomSelection>`): uses a small amount of separable functions to compute approximate objective
+ * **`CMAES<>`** (equivalent to `CMAES<FullSelection, EmptyTransformation<>>`): uses all separable functions to compute objective
+ * **`ApproxCMAES<>`** (equivalent to `CMAES<RandomSelection, EmptyTransformation<>>`): uses a small amount of separable functions to compute approximate objective
 
 #### Attributes
 
 | **type** | **name** | **description** | **default** |
 |----------|----------|-----------------|-------------|
 | `size_t` | **`lambda`** | The population size (0 uses a default size). | `0` |
-| `double` | **`lowerBound`** | Lower bound of decision variables. | `-10.0` |
-| `double` | **`upperBound`** | Upper bound of decision variables. | `10.0` |
+| `TransformationPolicyType` | **`transformationPolicy`** | Instantiated transformation policy used to map the coordinates to the desired domain. | `TransformationPolicyType()` |
 | `size_t` | **`batchSize`** | Batch size to use for the objective calculation. | `32` |
 | `size_t` | **`maxIterations`** | Maximum number of iterations. | `1000` |
 | `double` | **`tolerance`** | Maximum absolute tolerance to terminate algorithm. | `1e-5` |
 | `SelectionPolicyType` | **`selectionPolicy`** | Instantiated selection policy used to calculate the objective. | `SelectionPolicyType()` |
+| `size_t` | **`stepSize`** | Initial step size | `0` |
 
 Attributes of the optimizer may also be changed via the member methods
-`Lambda()`, `LowerBound()`, `UpperBound()`, `BatchSize()`, `MaxIterations()`,
+`Lambda()`, `TransformationPolicy()`, `BatchSize()`, `MaxIterations()`,
 `Tolerance()`, and `SelectionPolicy()`.
 
 The `selectionPolicy` attribute allows an instantiated `SelectionPolicyType` to
@@ -733,6 +907,12 @@ the option is not relevant when the `CMAES<>` optimizer type is being used; the
 `RandomSelection` policy has the constructor `RandomSelection(`_`fraction`_`)`
 where _`fraction`_ specifies the percentage of separable functions to use to
 estimate the objective function.
+The `transformationPolicy` attribute allows an instantiated 
+`TransformationPolicyType` to be given. The `EmptyTransformation<`_`MatType`_`>` 
+has no need to be instantiated. `BoundaryBoxConstraint<`_`MatType`_`>` policy has
+the constructor `BoundaryBoxConstraint(`_`lowerBound, upperBound`_`)`
+where  _`lowerBound`_ and _`lowerBound`_ are the lower bound and upper bound of 
+the coordinates respectively.
 
 #### Examples:
 
@@ -744,12 +924,13 @@ estimate the objective function.
 RosenbrockFunction f;
 arma::mat coordinates = f.GetInitialPoint();
 
-// CMAES with the FullSelection policy.
-CMAES<> optimizer(0, -1, 1, 32, 200, 1e-4);
+// CMAES with the FullSelection and BoundaryBoxConstraint policies.
+BoundaryBoxConstraint b(-1, 1);
+CMAES optimizer(0, b, 32, 200, 1e-4);
 optimizer.Optimize(f, coordinates);
 
-// CMAES with the RandomSelection policy.
-ApproxCMAES<> approxOptimizer(0, -1, 1. 32, 200, 1e-4);
+// CMAES with the RandomSelection and BoundaryBoxConstraint policies.
+ApproxCMAES<BoundaryBoxConstraint<>> cmaes(0, b, 32, 200, 1e-4);
 approxOptimizer.Optimize(f, coordinates);
 ```
 
@@ -2701,79 +2882,6 @@ optimizer.Optimize(f, coordinates);
  * [Nesterov Momentum SGD](#nesterov-momentum-sgd)
  * [SGD in Wikipedia](https://en.wikipedia.org/wiki/Stochastic_gradient_descent)
  * [Differentiable separable functions](#differentiable-separable-functions)
-
-## Stochastic Coordinate Descent (SCD)
-
-*An optimizer for [partially differentiable functions](#partially-differentiable-functions).*
-
-Stochastic Coordinate descent is a technique for minimizing a function by
-doing a line search along a single direction at the current point in the
-iteration. The direction (or "coordinate") can be chosen cyclically, randomly
-or in a greedy fashion.
-
-#### Constructors
-
- * `SCD<`_`DescentPolicyType`_`>()`
- * `SCD<`_`DescentPolicyType`_`>(`_`stepSize, maxIterations`_`)`
- * `SCD<`_`DescentPolicyType`_`>(`_`stepSize, maxIterations, tolerance, updateInterval`_`)`
- * `SCD<`_`DescentPolicyType`_`>(`_`stepSize, maxIterations, tolerance, updateInterval, descentPolicy`_`)`
-
-The _`DescentPolicyType`_ template parameter specifies the behavior of SCD when
-selecting the next coordinate to descend with.  The `RandomDescent`,
-`GreedyDescent`, and `CyclicDescent` classes are available for use.  Custom
-behavior can be achieved by implementing a class with the same method
-signatures.
-
-For convenience, the following typedefs have been defined:
-
- * `RandomSCD` (equivalent to `SCD<RandomDescent>`): selects coordinates randomly
- * `GreedySCD` (equivalent to `SCD<GreedyDescent>`): selects the coordinate with the maximum guaranteed descent according to the Gauss-Southwell rule
- * `CyclicSCD` (equivalent to `SCD<CyclicDescent>`): selects coordinates sequentially
-
-#### Attributes
-
-| **type** | **name** | **description** | **default** |
-|----------|----------|-----------------|-------------|
-| `double` | **`stepSize`** | Step size for each iteration. | `0.01` |
-| `size_t` | **`maxIterations`** | Maximum number of iterations allowed (0 means no limit). | `100000` |
-| `double` | **`tolerance`** | Maximum absolute tolerance to terminate the algorithm. | `1e-5` |
-| `size_t` | **`updateInterval`** | The interval at which the objective is to be reported and checked for convergence. | `1e3` |
-| `DescentPolicyType` | **`descentPolicy`** | The policy to use for selecting the coordinate to descend on. | `DescentPolicyType()` |
-
-Attributes of the optimizer may also be modified via the member methods
-`StepSize()`, `MaxIterations()`, `Tolerance()`, `UpdateInterval()`, and
-`DescentPolicy()`.
-
-Note that the default value for `descentPolicy` is the default constructor for
-_`DescentPolicyType`_.
-
-#### Examples
-
-<details open>
-<summary>Click to collapse/expand example code.
-</summary>
-
-```c++
-SparseTestFunction f;
-arma::mat coordinates = f.GetInitialPoint();
-
-RandomSCD randomscd(0.01, 100000, 1e-5, 1e3);
-randomscd.Optimize(f, coordinates);
-
-GreedySCD greedyscd(0.01, 100000, 1e-5, 1e3);
-greedyscd.Optimize(f, coordinates);
-
-CyclicSCD cyclicscd(0.01, 100000, 1e-5, 1e3);
-cyclicscd.Optimize(f, coordinates);
-```
-
-</details>
-
-#### See also:
-
- * [Coordinate descent on Wikipedia](https://en.wikipedia.org/wiki/Coordinate_descent)
- * [Stochastic Methods for L1-Regularized Loss Minimization](https://www.jmlr.org/papers/volume12/shalev-shwartz11a/shalev-shwartz11a.pdf)
- * [Partially differentiable functions](#partially-differentiable-functions)
 
 ## Stochastic Gradient Descent with Restarts (SGDR)
 

@@ -1,6 +1,7 @@
 # The tests that need to be compiled.
 set(ENSMALLEN_TESTS_SOURCES
     main.cpp
+    active_cmaes_test.cpp
     ada_belief_test.cpp
     ada_bound_test.cpp
     ada_delta_test.cpp
@@ -10,6 +11,7 @@ set(ENSMALLEN_TESTS_SOURCES
     aug_lagrangian_test.cpp
     bigbatch_sgd_test.cpp
     callbacks_test.cpp
+    cd_test.cpp
     cmaes_test.cpp
     cne_test.cpp
     de_test.cpp
@@ -38,7 +40,6 @@ set(ENSMALLEN_TESTS_SOURCES
     rmsprop_test.cpp
     sa_test.cpp
     sarah_test.cpp
-    scd_test.cpp
     sdp_primal_dual_test.cpp
     sgdr_test.cpp
     sgd_test.cpp
