@@ -19,7 +19,7 @@
 
 namespace ens {
 
-/**
+/**aa
  * After the velocity of each particle is updated at the end of each iteration
  * in PSO, the position of particle i (in iteration j) is updated as:
  *
@@ -139,6 +139,10 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
 
     // In-place update of particle positions.
     particlePositions += particleVelocities;
+    std::cout<< "Best particle Position: " << particlePositions.slice(bestParticle) << std::endl;
+    constraints.applyConstraints(particlePositions);
+    std::cout << "Best particle Position: " << particlePositions.slice(bestParticle) << std::endl;
+
 
     // Find the best particle.
     for (size_t j = 0; j < numParticles; j++)
@@ -149,6 +153,11 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
         bestFitness = particleBestFitnesses(bestParticle);
       }
     }
+
+
+    //std::cout << "Best particle: " << bestParticle << std::endl;
+    //std::cout << "Best particle Position: " << particlePositions.slice(bestParticle) << std::endl;
+    //std::cout << "Best particle fitness: " << bestFitness << std::endl;
 
     terminate |= Callback::StepTaken(*this, function,
         particleBestPositions.slice(bestParticle), callbacks...);
@@ -187,6 +196,9 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
 
     // In-place update of particle positions.
     particlePositions += particleVelocities;
+    std::cout << "Best particle Position: " << particlePositions.slice(bestParticle) << std::endl;
+    constraints.applyConstraints(particlePositions);
+    std::cout << "Best particle Position: " << particlePositions.slice(bestParticle) << std::endl;
 
     // Find the best particle.
     for (size_t j = 0; j < numParticles; j++)
@@ -198,6 +210,9 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
       }
     }
 
+    //std::cout << "Best particle: " << bestParticle << std::endl;
+    //std::cout<< "Best particle Position: " << particlePositions.slice(bestParticle) << std::endl;
+    //std::cout<< "Best particle fitness: " << bestFitness << std::endl;
     terminate |= Callback::StepTaken(*this, function,
         particleBestPositions.slice(bestParticle), callbacks...);
 

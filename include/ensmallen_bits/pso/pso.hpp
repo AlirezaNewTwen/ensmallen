@@ -15,6 +15,7 @@
 
 #include "update_policies/lbest_update.hpp"
 #include "init_policies/default_init.hpp"
+#include "ConstraintsNT.hpp"
 
 namespace ens {
 
@@ -110,6 +111,31 @@ class PSOType
           initPolicy(initPolicy)
   { /* Nothing to do. */ }
 
+  template<typename MatType>
+  PSOType(const size_t numParticles = 64,
+      const arma::mat& lowerBound = arma::ones(1, 1),
+      const arma::mat& upperBound = arma::ones(1, 1),
+      const size_t maxIterations = 3000,
+      const size_t horizonSize = 350,
+      const double impTolerance = 1e-10,
+      const double exploitationFactor = 2.05,
+      const double explorationFactor = 2.05,
+      const ConstraintsNT<MatType>& myConstraints = ConstraintsNT<MatType>(), // Provide a default here.
+      const VelocityUpdatePolicy& velocityUpdatePolicy =
+      VelocityUpdatePolicy(),
+      const InitPolicy& initPolicy = InitPolicy()) :
+      numParticles(numParticles),
+      lowerBound(lowerBound),
+      upperBound(upperBound),
+      maxIterations(maxIterations),
+      horizonSize(horizonSize),
+      impTolerance(impTolerance),
+      exploitationFactor(exploitationFactor),
+      explorationFactor(explorationFactor),
+      velocityUpdatePolicy(velocityUpdatePolicy),
+      initPolicy(initPolicy),
+      constraints(myConstraints)
+  { /* Nothing to do. */ }
   /**
    * Clean memory associated with the PSO object.
    */
@@ -242,6 +268,9 @@ class PSOType
   //! Upper bound of the initial swarm.
   arma::mat upperBound;
 
+  //! NT constrains
+  const ConstraintsNT<arma::mat> constraints;
+
   //! Maximum number of iterations for which the optimizer will run.
   size_t maxIterations;
 
@@ -257,6 +286,10 @@ class PSOType
   //! Exploration factor for lbest version.
   double explorationFactor;
 
+
+
+  //SetConstraints(const ConstraintsNT<arma::mat>& myConstraints)  {constraints = myConstraints;}
+  //Constrains() const {return constraints;}
   //! Velocity update policy used.
   VelocityUpdatePolicy velocityUpdatePolicy;
   //! Particle initialization policy used.
@@ -270,5 +303,6 @@ using LBestPSO = PSOType<LBestUpdate>;
 } // ens
 
 #include "pso_impl.hpp"
+
 
 #endif

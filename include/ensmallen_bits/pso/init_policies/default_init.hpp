@@ -108,6 +108,7 @@ class DefaultInit
     particleFitnesses.set_size(numParticles);
     particleFitnesses.fill(std::numeric_limits<ElemType>::max());
 
+    std::cout<<"particlePositions: "<<particlePositions<<std::endl;
     // Copy to personal best values for first iteration.
     particleBestPositions = particlePositions;
     // Initialize personal best fitness values to infinity.
