@@ -1,9 +1,14 @@
 /**
  * @file shade_impl.hpp
- * @author Rahul Ganesh Prabhu
+ * @author Alireza
  *
  * Implementation of Differential Evolution an evolutionary algorithm used for
  * global optimization of arbitrary functions.
+ *
+ * This package is based on  MATLAB version of SHADE 1.1.
+ * Ryoji Tanabe and Alex Fukunaga: Improving the Search Performance of SHADE Using Linear Population Size Reduction,  Proc. IEEE
+ * Congress on Evolutionary Computation (CEC-2014), Beijing, July, 2014.
+ * based on: https://ryojitanabe.github.io/publication
  *
  * ensmallen is free software; you may redistribute it and/or modify it under
  * the terms of the 3-clause BSD license.  You should have received a copy of
@@ -47,8 +52,10 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
   typedef typename MatTypeTraits<MatType>::BaseMatType BaseMatType;
 
   BaseMatType& iterate = (BaseMatType&) iterateIn;
+  // BaseMatType is the type of a candidate solution that can be a vecror of paramethers
+  // ElemType is the type of a fittness value
 
-  //parameter settings for SHADE SHADE SHADE SHADE SHADE SHADE
+  //parameter settings for SHADE
   double p_best_rate = 0.1;
   double arc_rate = 2.0;
   int problem_size = iterate.n_rows;
@@ -61,7 +68,7 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
   // Initialize archive
   int archive_NP = static_cast<int>(arc_rate * pop_size);
   std::vector<BaseMatType> archive_pop(0, BaseMatType(problem_size, 0.0));
-  arma::Col<ElemType>      archive_funvalues = arma::zeros<arma::vec>(0);
+  //arma::Col<ElemType>      archive_funvalues = arma::zeros<arma::vec>(0);
   //SHADE SHADE SHADE SHADE SHADE SHADE
 
   // Population matrix. Each column is a candidate.
@@ -85,16 +92,18 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
   }
 
   // Initialize helper variables.
-  arma::Col<ElemType> fitnessDif;
-  fitnessDif.set_size(populationSize);
+  arma::Col<ElemType> fitnessDif(populationSize);
   ElemType lastBestFitness = DBL_MAX;
   BaseMatType bestElement;
-  std::queue<ElemType> performanceHorizon;
-  int max_queue = 60;
+
 
   // Controls early termination of the optimization process.
   bool terminate = false;
+  std::queue<ElemType> performanceHorizon;
+  int max_queue = 60;
   arma::arma_rng::set_seed_random();
+
+
   boxConstraint.RandomReseed(iterate);//why just tje iterate ALIREZA CHECK
   std::cout << "Need To be cheked ALIREZA";
   // Generate a population based on a Gaussian distribution around the given
@@ -185,29 +194,27 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
 	}
     arma::mat randMask = arma::randu(pop_size, problem_size);
     arma::mat crReplicated = arma::repmat(crS, 1, problem_size);
-
     arma::umat crMask = randMask > crReplicated;
     arma::uvec jrand = arma::randi<arma::uvec>(pop_size, arma::distr_param(0, problem_size - 1));
+
 
     for (arma::uword i = 0; i < pop_size; ++i) {
         crMask(i, jrand(i)) = 0;
     }
 
-
     std::vector<BaseMatType> ui=vi;
-
 	for (arma::uword i = 0; i < pop_size; ++i) {
 		ui[i].elem(arma::find(crMask.row(i)))=population[i].elem(arma::find(crMask.row(i)));
 	}
 
-
-  	//std::vector<BaseMatType> pbest=population.rows(sorted_index.elem(randindex));
-
+    std::cout << "Alireza check the boundConstraint in matlab code";
   	//SHADE SHADE SHADE SHADE SHADE SHADE
 
     // Archiving data SHADE SHADE SHADE SHADE SHADE SHADE
     std::vector<BaseMatType> popToArchive(0, BaseMatType(problem_size, 0.0));
-    arma::Col<ElemType> funvalueToArchive;
+    //arma::Col<ElemType> funvalueToArchive=arma::zeros<arma::vec>(0);
+
+
     // Generate new population based on /best/1/bin strategy.
     #pragma omp parallel for num_threads(8)
     for (int member = 0; member < populationSize; member++)
@@ -217,11 +224,11 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
       
       // Generate new "mutant" from two randomly chosen members.
       BaseMatType mutant = ui[member];
-
+      std::cout << "Alireza check the if it is better to be constrained when made";
       //box constraints
       boxConstraint.RandBehave(mutant);
 
-
+      std::cout << "Alireza the are evaluated both, one should be done not both";
       ElemType iterateValue = function.Evaluate(iterate);
       #pragma omp critical 
       Callback::Evaluate(*this, function, iterate, iterateValue, callbacks...);
@@ -229,22 +236,30 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
       const ElemType mutantValue = function.Evaluate(mutant);
       #pragma omp critical 
       Callback::Evaluate(*this, function, mutant, mutantValue, callbacks...);
-      //fitnessDif[member] = abs(mutantValue - iterateValue);
+
+      std::cout << "check if we need to consider evaluation";
+      if (iterateValue != fitnessValues[member])
+      {
+          std::cout << "fitnessValues[member]=" << fitnessValues[member] << std::endl << "iterateValue=" << iterateValue << "dif=" << (iterateValue - fitnessValues[member]) << std::endl;
+          throw std::runtime_error("the fitnessValue of population is changed!!.");
+      }
+
+      
       fitnessDif[member] = iterateValue - mutantValue;
+
       // Replace the current member if mutant is better.
       if (mutantValue < iterateValue)
       {
         iterate = mutant;
         iterateValue = mutantValue;
         goodChildren(member) = true;
-        //goodF[member] = true;
         #pragma omp critical 
         terminate |= Callback::StepTaken(*this, function, iterate,callbacks...);
       }
       else
       {
           popToArchive.push_back(mutant);
-      	  funvalueToArchive.insert_rows(funvalueToArchive.n_rows, mutantValue);
+          std::cout << "Alireza check if you need do somthing like omp thing above";
       }
 
       fitnessValues[member] = iterateValue;
@@ -258,24 +273,7 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
   	//archiveSHADEUPDATEUPDATEUPDATEUPDATEUPDATEUPDATEUPDATEUPDATEUPDATEUPDATEU
     std::vector<BaseMatType> tempArcive = archive_pop;
     tempArcive.insert(tempArcive.end(), popToArchive.begin(), popToArchive.end());
-    arma::Col<ElemType> tempfunvalues = arma::join_cols(archive_funvalues, funvalueToArchive);
-    //tempfunvalues.insert_rows(tempfunvalues.n_rows, funvalueToArchive);
-
-    std::cout<< "Aliiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii"<<std::endl;
-
-    for (int i = 0; i < archive_pop.size(); ++i)
-    {
-        std::cout << "archive_pop." << i << "=" << archive_pop[i] << std::endl;
-    }
-    for (int i = 0; i < popToArchive.size(); ++i)
-    {
-        std::cout << "popToArchive." << i << "=" << popToArchive[i] << std::endl;
-    }
-    for (int i = 0; i < tempArcive.size(); ++i)
-    {
-        std::cout << "tempArcive." << i << "=" << tempArcive[i] << std::endl;
-    }
-
+    
     std::unordered_set<std::string> uniqueIdentifiers;
     std::vector<bool> hasDuplicates(tempArcive.size(), false);
 
@@ -284,7 +282,7 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
 
         // Convert BaseMatType to a unique identifier (string ).
         std::ostringstream oss;
-        oss << element;  // You might want to use a more appropriate serialization method based on your needs.
+        oss << element;  // we might want to use a more appropriate serialization method.
         std::string identifier = oss.str();
 
         // Check for duplicates.
@@ -300,13 +298,13 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
             if (i >= archive_pop.size() && archive_pop.size() < archive_NP)
             {
                 archive_pop.push_back(element);
-				archive_funvalues.insert_rows(archive_funvalues.n_rows, tempfunvalues[i]);
+				//archive_funvalues.insert_rows(archive_funvalues.n_rows, tempfunvalues[i]);
 			}
             else if (i >= archive_pop.size() && archive_pop.size() == archive_NP)
             {
 	            int randIndex = arma::randi<arma::uvec>(1, arma::distr_param(0, archive_NP - 1))[0];
 				archive_pop[randIndex] = element;
-                archive_funvalues[randIndex] = tempfunvalues[i];
+                //archive_funvalues[randIndex] = tempfunvalues[i];
             }
             else if (archive_pop.size() > archive_NP)
             {
@@ -316,21 +314,6 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
     }
 
 
-  //  for (const BaseMatType& element : tempArcive)
-  //  {
-  //  	std::ostringstream oss;
-		//oss << element;  // You might want to use a more appropriate serialization method based on your needs.
-		//std::string identifier = oss.str();
-		//// Check for duplicates.
-		//if (!uniqueIdentifiers.insert(identifier).second)
-		//{
-  //          archive_pop.push_back(element);
-		//}
-
-  //  }
-
-    	//archiveSHADEUPDATEUPDATEUPDATE
-    // Append bestFitness to performanceHorizon.
     size_t id_min = fitnessValues.index_min();
     ElemType min_objective = fitnessValues[id_min];
 
@@ -386,9 +369,7 @@ inline void SHADE::gnR1R2(int NP1, int NP2, const arma::uvec& r0, arma::uvec& r1
 
 
     // Initialize r1
-
     r1 = arma::randi<arma::uvec>(NP1, arma::distr_param(0, NP1 - 1));
-
     // Regenerate r1 if it is equal to r0
     for (int i = 0; i < 99999999; ++i) {
         arma::uvec pos = (r1 == r0);
@@ -406,9 +387,7 @@ inline void SHADE::gnR1R2(int NP1, int NP2, const arma::uvec& r0, arma::uvec& r1
     }
 
     // Initialize r2
-
     r2 = arma::randi<arma::uvec>(NP1, arma::distr_param(0, NP2 - 1));
-
     // Regenerate r2 if it is equal to r0 or r1
     for (int i = 0; i < 99999999; ++i) {
         arma::uvec pos = ((r2 == r1) || (r2 == r0));
