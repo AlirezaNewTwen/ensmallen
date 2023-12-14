@@ -48,12 +48,12 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
                                          CallbackTypes&&... callbacks)
 {
   // Convenience typedefs.
-  typedef typename MatType::elem_type ElemType;
-  typedef typename MatTypeTraits<MatType>::BaseMatType BaseMatType;
+  typedef typename MatType::elem_type ElemType; // ElemType is the type of a fittness value
+  // BaseMatType is the type of a candidate solution that can be a vecror of paramethers
+  typedef typename MatTypeTraits<MatType>::BaseMatType BaseMatType; 
 
   BaseMatType& iterate = (BaseMatType&) iterateIn;
-  // BaseMatType is the type of a candidate solution that can be a vecror of paramethers
-  // ElemType is the type of a fittness value
+
 
   //parameter settings for SHADE
   double p_best_rate = 0.1;
@@ -68,7 +68,6 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
   // Initialize archive
   int archive_NP = static_cast<int>(arc_rate * pop_size);
   std::vector<BaseMatType> archive_pop(0, BaseMatType(problem_size, 0.0));
-  //arma::Col<ElemType>      archive_funvalues = arma::zeros<arma::vec>(0);
   //SHADE SHADE SHADE SHADE SHADE SHADE
 
   // Population matrix. Each column is a candidate.
