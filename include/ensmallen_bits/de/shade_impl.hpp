@@ -152,7 +152,7 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
   {
 
   	//For generating crossover rate SHADE SHADE SHADE SHADE SHADE SHADE
-    std::cout << "Alireza check if fitnessValues is updetaed correctly during the loop";
+//    std::cout << "Alireza check if fitnessValues is updetaed correctly during the loop";
     arma::umat goodChildren = arma::zeros<arma::umat>(populationSize);
       arma::uvec sorted_index = arma::sort_index(fitnessValues);
       // Generate random indices
@@ -222,7 +222,6 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
 		ui[i].elem(arma::find(crMask.row(i)))=population[i].elem(arma::find(crMask.row(i)));
 	}
 
-    std::cout << "Alireza check the boundConstraint in matlab code";
   	//SHADE SHADE SHADE SHADE SHADE SHADE
 
     // Archiving data SHADE SHADE SHADE SHADE SHADE SHADE
@@ -239,9 +238,9 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
       
       // Generate new "mutant" from two randomly chosen members.
       BaseMatType mutant = ui[member];
-      std::cout << "Alireza check the if it is better to be constrained when made";
+
       constraints.enforceConstraints(mutant);
-      std::cout << "Alireza the are evaluated both, one should be done not both";
+      //std::cout << "Alireza the are evaluated both, one should be done not both";
       ElemType iterateValue = function.Evaluate(iterate);
       #pragma omp critical 
       Callback::Evaluate(*this, function, iterate, iterateValue, callbacks...);
@@ -250,7 +249,7 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
       #pragma omp critical 
       Callback::Evaluate(*this, function, mutant, mutantValue, callbacks...);
 
-      std::cout << "check if we need to consider evaluation";
+      //std::cout << "Alireza check if we need to consider evaluation";
       if (iterateValue != fitnessValues[member])
       {
           std::cout << "fitnessValues[member]=" << fitnessValues[member] << std::endl << "iterateValue=" << iterateValue << "dif=" << (iterateValue - fitnessValues[member]) << std::endl;
@@ -272,7 +271,7 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
       else
       {
           popToArchive.push_back(mutant);
-          std::cout << "Alireza check if you need do somthing like omp thing above";
+//          std::cout << "Alireza check if you need do somthing like omp thing above";
       }
 
       fitnessValues[member] = iterateValue;
