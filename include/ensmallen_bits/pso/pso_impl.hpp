@@ -13,7 +13,7 @@
 #ifndef ENSMALLEN_PSO_PSO_IMPL_HPP
 #define ENSMALLEN_PSO_PSO_IMPL_HPP
 
-#include "pso.hpp"
+//#include "pso.hpp"
 #include <ensmallen_bits/function.hpp>
 #include <queue>
 
@@ -139,9 +139,18 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
 
     // In-place update of particle positions.
     particlePositions += particleVelocities;
-    std::cout<< "Best particle Position: " << particlePositions.slice(bestParticle) << std::endl;
-    constraints.applyConstraints(particlePositions);
-    std::cout << "Best particle Position: " << particlePositions.slice(bestParticle) << std::endl;
+    std::cout<< "Best particle PositionB: " << particlePositions.slice(bestParticle) << std::endl;
+
+    for (size_t sliceIdx=0; sliceIdx< particlePositions.n_slices; sliceIdx++)
+    {
+        //std::cout << " particle : " << sliceIdx << std::endl;
+        //std::cout << particlePositions.slice(sliceIdx) << std::endl;
+        //constraints.printValidity(particlePositions.slice(sliceIdx));
+        constraints.enforceConstraints(particlePositions.slice(sliceIdx));
+        //constraints.printValidity(particlePositions.slice(sliceIdx));
+    }
+    
+    std::cout << "Best particle PositionA: " << particlePositions.slice(bestParticle) << std::endl;
 
 
     // Find the best particle.
@@ -196,9 +205,19 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
 
     // In-place update of particle positions.
     particlePositions += particleVelocities;
-    std::cout << "Best particle Position: " << particlePositions.slice(bestParticle) << std::endl;
-    constraints.applyConstraints(particlePositions);
-    std::cout << "Best particle Position: " << particlePositions.slice(bestParticle) << std::endl;
+    std::cout<< "Best particle PositionB: " << particlePositions.slice(bestParticle) << std::endl;
+
+    for (size_t sliceIdx = 0; sliceIdx < particlePositions.n_slices; sliceIdx++)
+    {
+        //std::cout << " particle : " << sliceIdx << std::endl;
+        //std::cout << particlePositions.slice(sliceIdx) << std::endl;
+        //constraints.printValidity(particlePositions.slice(sliceIdx));
+        constraints.enforceConstraints(particlePositions.slice(sliceIdx));
+        //constraints.printValidity(particlePositions.slice(sliceIdx));
+    }
+
+    std::cout << "Best particle PositionA: " << particlePositions.slice(bestParticle) << std::endl;
+
 
     // Find the best particle.
     for (size_t j = 0; j < numParticles; j++)
@@ -220,6 +239,7 @@ typename MatType::elem_type PSOType<VelocityUpdatePolicy, InitPolicy>::Optimize(
     performanceHorizon.pop();
     // Push most recent bestFitness to performanceHorizon.
     performanceHorizon.push(bestFitness);
+    std::cout << "i="<<i<<std::endl;
   }
 
   // Copy results back.

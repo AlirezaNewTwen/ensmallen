@@ -120,7 +120,7 @@ class PSOType
       const double impTolerance = 1e-10,
       const double exploitationFactor = 2.05,
       const double explorationFactor = 2.05,
-      const ConstraintsNT<MatType>& myConstraints = ConstraintsNT<MatType>(), // Provide a default here.
+      ConstraintsNT<MatType>& myConstraints = ConstraintsNT<MatType>(), // Provide a default here.
       const VelocityUpdatePolicy& velocityUpdatePolicy =
       VelocityUpdatePolicy(),
       const InitPolicy& initPolicy = InitPolicy()) :
@@ -269,7 +269,7 @@ class PSOType
   arma::mat upperBound;
 
   //! NT constrains
-  const ConstraintsNT<arma::mat> constraints;
+  ConstraintsNT<arma::mat> constraints;
 
   //! Maximum number of iterations for which the optimizer will run.
   size_t maxIterations;
