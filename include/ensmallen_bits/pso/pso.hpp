@@ -15,7 +15,7 @@
 
 #include "update_policies/lbest_update.hpp"
 #include "init_policies/default_init.hpp"
-#include "ConstraintsNT.hpp"
+#include "../constraints/ConstraintsNT.hpp"
 
 namespace ens {
 

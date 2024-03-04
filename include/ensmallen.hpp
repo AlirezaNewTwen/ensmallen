@@ -139,4 +139,6 @@
 #include "ensmallen_bits/wn_grad/wn_grad.hpp"
 #include "ensmallen_bits/yogi/yogi.hpp"
 
+#include "ensmallen_bits/constraints/ConstraintsNT.hpp"
+
 #endif

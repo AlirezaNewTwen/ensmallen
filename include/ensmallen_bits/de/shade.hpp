@@ -15,7 +15,7 @@
 #ifndef ENSMALLEN_SHADE_SHADE_HPP
 #define ENSMALLEN_SHADE_SHADE_HPP
 
-#include "ConstraintsNT.hpp"
+#include "../constraints/ConstraintsNT.hpp"
 
 template <typename MatType>
 class ConstraintsNT;

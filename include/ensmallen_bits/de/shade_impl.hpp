@@ -230,7 +230,7 @@ typename MatType::elem_type SHADE::Optimize(FunctionType& function,
 
 
     // Generate new population based on /best/1/bin strategy.
-    #pragma omp parallel for num_threads(8)
+    #pragma omp parallel for num_threads(1)
     for (int member = 0; member < populationSize; member++)
     {
       iterate = population[member];
