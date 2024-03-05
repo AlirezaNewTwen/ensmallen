@@ -64,13 +64,15 @@ namespace ens {
 		//	typOfConstraints(1, ConstraintType::bounds)
 		//{}
 
-		ConstraintsNT(const std::vector<std::tuple<std::string, double, double>>& uncertain_parameters_,const std::shared_ptr<std::vector<double>>& initailValues)
+		ConstraintsNT(const std::vector<std::tuple<std::string, double, double>>& uncertain_parameters_,const std::shared_ptr<std::vector<double>>& initailValues):
+			_initial_values(initailValues)
 		{
-			_initial_values = initailValues;
 			dimProb= uncertain_parameters_.size();
 			lowerbounds.set_size(dimProb);
 			upperbounds.set_size(dimProb);
 			_parametherTags.resize(dimProb);
+			typOfConstraints.clear();
+			typOfConstraints.push_back(ConstraintType::bounds);
 			constraintCounts[ConstraintType::bounds] = dimProb;
 			constraintCounts[ConstraintType::inequality] = 0;
 			constraintCounts[ConstraintType::expression] = 0;
@@ -717,12 +719,14 @@ namespace ens {
 			symbolTable.add_constants();
 
 			// Compile.
-			for (const std::string& exprStr : strExpressions) {
+			//for (const std::string& exprStr : strExpressions) {
+			for (std::string exprStr : strExpressions) {
+				//std::cout << "Expression:" << exprStr << std::endl;
 				exprtk::expression<ElemType> compiledExpression;
 				compiledExpression.register_symbol_table(symbolTable);
 
 				if (!exprtk::parser<ElemType>().compile(exprStr, compiledExpression)) {
-					throw std::runtime_error("Error compiling constraint expression.");
+					throw std::runtime_error("Error compiling constraint expression. Please Check the constraint expression"+ exprStr);
 				}
 				constraintExpressions.push_back(compiledExpression);
 
