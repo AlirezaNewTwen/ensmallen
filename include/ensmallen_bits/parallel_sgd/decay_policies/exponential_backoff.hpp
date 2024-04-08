@@ -64,7 +64,7 @@ class ExponentialBackoff
     if (numEpoch >= cutoffEpoch)
     {
       step *= beta;
-      cutoffEpoch += firstBackoffEpoch / static_cast<size_t>(beta);
+      cutoffEpoch += firstBackoffEpoch / beta;
     }
     return step;
   }

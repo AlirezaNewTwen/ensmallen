@@ -235,9 +235,9 @@ inline void LovaszThetaSDP::Gradient(const arma::mat& coordinates,
       a.zeros(n, n);
 
       // Only two nonzero entries.
-      a(static_cast<int>(edge[0]), static_cast<int>(edge[1])) = 1;
-      a(static_cast<int>(edge[1]), static_cast<int>(edge[0])) = 1;
-      
+      a(edge[0], edge[1]) = 1;
+      a(edge[1], edge[0]) = 1;
+
       double inner = (-1) - 0.5 *
           (accu(a % (trans(coordinates) * coordinates)));
 
@@ -268,8 +268,8 @@ inline double LovaszThetaSDP::EvaluateConstraint(const size_t index,
     return sum;
   }
 
-  size_t i = static_cast<size_t>(edges(0, index - 1));
-  size_t j = static_cast<size_t>(edges(1, index - 1));
+  size_t i = edges(0, index - 1);
+  size_t j = edges(1, index - 1);
 
   // The constraint itself is X_ij, or (R^T R)_ij.
   return std::abs(dot(coordinates.col(i), coordinates.col(j)));
@@ -285,8 +285,8 @@ inline void LovaszThetaSDP::GradientConstraint(const size_t index,
     return;
   }
 
-  size_t i = static_cast<size_t>(edges(0, index - 1));
-  size_t j = static_cast<size_t>(edges(1, index - 1));
+  size_t i = edges(0, index - 1);
+  size_t j = edges(1, index - 1);
 
   // Since the constraint is (R^T R)_ij, the gradient for (x, y) will be (I
   // derived this for one of the MVU constraints):
@@ -321,12 +321,12 @@ inline const arma::mat& LovaszThetaSDP::GetInitialPoint()
   //   r = 0.5 [+/-] sqrt(0.25 + 2 m)
   // and because m is always positive,
   //   r = 0.5 + sqrt(0.25 + 2m)
-  float m = static_cast<float>(NumConstraints());
-  float r = 0.5f + sqrt(0.25f + 2.f * m);
-  if (ceil(r) > static_cast<float>(vertices))
-    r = static_cast<float>(vertices); // An upper bound on the dimension.
+  float m = NumConstraints();
+  float r = 0.5 + sqrt(0.25 + 2 * m);
+  if (ceil(r) > vertices)
+    r = vertices; // An upper bound on the dimension.
 
-  initialPoint.set_size(static_cast<int>(ceil(r)), static_cast<int>(vertices));
+  initialPoint.set_size(ceil(r), vertices);
 
   // Now we set the entries of the initial matrix according to the formula given
   // in Section 4 of Monteiro and Burer.
