@@ -263,15 +263,15 @@ inline void SoftmaxRegressionFunction::Gradient(
     // the cost of building matrix [1; data].
     arma::mat inner = probabilities - groundTruth;
     gradient.col(0) =
-      inner * arma::ones<arma::mat>(data.n_cols, 1) / data.n_cols +
+      inner * arma::ones<arma::mat>(data.n_cols, 1) / static_cast<double>(data.n_cols) +
       lambda * parameters.col(0);
     gradient.cols(1, parameters.n_cols - 1) =
-      inner * data.t() / data.n_cols +
+      inner * data.t() / static_cast<double>(data.n_cols) +
       lambda * parameters.cols(1, parameters.n_cols - 1);
   }
   else
   {
-    gradient = (probabilities - groundTruth) * data.t() / data.n_cols +
+    gradient = (probabilities - groundTruth) * data.t() / static_cast<double>(data.n_cols) +
                lambda * parameters;
   }
 }
@@ -292,16 +292,16 @@ inline void SoftmaxRegressionFunction::Gradient(
     arma::mat inner = probabilities - groundTruth.cols(start, start +
         batchSize - 1);
     gradient.col(0) =
-        inner * arma::ones<arma::mat>(batchSize, 1) / batchSize +
+        inner * arma::ones<arma::mat>(batchSize, 1) / static_cast<double>(batchSize) +
         lambda * parameters.col(0);
     gradient.cols(1, parameters.n_cols - 1) =
-        inner * data.cols(start, start + batchSize - 1).t() / batchSize +
+        inner * data.cols(start, start + batchSize - 1).t() / static_cast<double>(batchSize) +
         lambda * parameters.cols(1, parameters.n_cols - 1);
   }
   else
   {
     gradient = (probabilities - groundTruth.cols(start, start + batchSize - 1))
-        * data.cols(start, start + batchSize - 1).t() / batchSize
+        * data.cols(start, start + batchSize - 1).t() / static_cast<double>(batchSize)
         + lambda * parameters;
   }
 }
@@ -323,18 +323,18 @@ inline void SoftmaxRegressionFunction::PartialGradient(
     if (j == 0)
     {
       gradient.col(j) =
-          inner * arma::ones<arma::mat>(data.n_cols, 1) / data.n_cols +
+          inner * arma::ones<arma::mat>(data.n_cols, 1) / static_cast<double>(data.n_cols) +
           lambda * parameters.col(0);
     }
     else
     {
-      gradient.col(j) = inner * data.row(j).t() / data.n_cols + lambda *
+      gradient.col(j) = inner * data.row(j).t() / static_cast<double>(data.n_cols) + lambda *
           parameters.col(j);
     }
   }
   else
   {
-    gradient.col(j) = inner * data.row(j).t() / data.n_cols + lambda *
+    gradient.col(j) = inner * data.row(j).t() / static_cast<double>(data.n_cols) + lambda *
         parameters.col(j);
   }
 }

@@ -11,18 +11,17 @@
 
 
 #if !defined(ENS_PRINT_INFO)
-  // #define ENS_PRINT_INFO
+  #define ENS_PRINT_INFO
 #endif
 
 #if !defined(ENS_PRINT_WARN)
-  // #define ENS_PRINT_WARN
+  #define ENS_PRINT_WARN
 #endif
 
 #if defined(ARMA_USE_OPENMP)
   #undef  ENS_USE_OPENMP
   #define ENS_USE_OPENMP
 #endif
-
 
 //
 

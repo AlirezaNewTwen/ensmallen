@@ -172,9 +172,11 @@ class PSOType
    */
   template<typename ArbitraryFunctionType,
            typename MatType,
+           template<class> class VariablesConstraints,
            typename... CallbackTypes>
   typename MatType::elem_type Optimize(ArbitraryFunctionType& function,
                                        MatType& iterate,
+                                       VariablesConstraints<MatType>& box_constraints,
                                        CallbackTypes&&... callbacks);
 
   //! Retrieve value of numParticles.

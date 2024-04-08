@@ -73,14 +73,14 @@ class SnapshotEnsembles
     {
       if (i > nr)
       {
-        er *= multFactor;
+        er = static_cast<size_t>(er*multFactor);
         nr += er;
         snapshotEpochs++;
       }
     }
 
-    snapshotEpochs = epochRestart * std::pow(multFactor,
-        snapshotEpochs - snapshots + 1);
+    snapshotEpochs = static_cast<size_t>(epochRestart * std::pow(multFactor,
+        snapshotEpochs - snapshots + 1));
   }
 
   //! Get the step size.
